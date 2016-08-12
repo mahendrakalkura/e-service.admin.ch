@@ -1,0 +1,14 @@
+# -*- coding: utf-8 -*-
+
+INSTANTPROXIES_COM = {
+    'username': '...',
+    'password': '...',
+}
+
+POSTGRESQL = {
+    'host': '...',
+    'port': '...',
+    'user': '...',
+    'password': '...',
+    'database': '...',
+}
