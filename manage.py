@@ -121,7 +121,7 @@ def bootstrap():
                     number CHARACTER VARYING(255) NOT NULL,
                     zip_code CHARACTER VARYING(255) NOT NULL,
                     city CHARACTER VARYING(255) NOT NULL,
-                    contents jsonb NULL
+                    contents json NULL
                 )
             '''
             cursor.execute(query)
