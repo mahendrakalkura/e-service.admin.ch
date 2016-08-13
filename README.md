@@ -18,6 +18,8 @@ How to run?
 ```
 $ cd e-service.admin.ch
 $ workon e-service.admin.ch
-$ python 1.py
+$ python manage.py bootstrap
+$ python manage.py get_proxies
+$ python manage.py get_details
 $ deactivate
 ```
