@@ -24,6 +24,8 @@ cache = CacheManager(**parse_cache_config_options(options))
 
 @cache.cache('get_details', expire=86400)
 def get_details(road, number, zip_code, city):
+    proxies = get_proxies(False)
+
     session = Session()
 
     response = session.request(
@@ -33,7 +35,7 @@ def get_details(road, number, zip_code, city):
             'forward': 'zustaendigkeit',
             'navId': 'zustaendigkeit',
         },
-        proxies=get_proxies(False),
+        proxies=proxies,
     )
 
     response = session.request(
@@ -42,7 +44,7 @@ def get_details(road, number, zip_code, city):
         params={
             'postCode': zip_code,
         },
-        proxies=get_proxies(False),
+        proxies=proxies,
     )
 
     selector = Selector(text=response.text)
@@ -66,7 +68,7 @@ def get_details(road, number, zip_code, city):
             'street': road,
             'tabindex': '11',
         },
-        proxies=get_proxies(False),
+        proxies=proxies,
     )
 
     details = {
