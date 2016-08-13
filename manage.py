@@ -184,7 +184,7 @@ def bootstrap():
             newline='',
         ) as resource:
             rows = csv.reader(resource, delimiter=u';')
-            for row in tqdm(rows):
+            for row in tqdm(rows, total=1815462):
                 with closing(connection.cursor()) as cursor:
                     query = '''
                     SELECT id
