@@ -170,11 +170,6 @@ def bootstrap():
             '''
             cursor.execute(query)
 
-            query = '''
-            CREATE INDEX records_contents ON records USING btree (contents)
-            '''
-            cursor.execute(query)
-
             connection.commit()
 
         with open(
