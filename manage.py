@@ -2,7 +2,6 @@
 
 from contextlib import closing
 from io import open
-from pprint import pprint
 from sys import argv
 
 from backports import csv
@@ -10,7 +9,7 @@ from psycopg2.extensions import register_type, UNICODE, UNICODEARRAY
 from tqdm import tqdm
 
 from tasks import celery as celery_
-from utilities import get_connection, get_proxies, get_sentry, get_total
+from utilities import get_connection, get_sentry, get_total
 
 register_type(UNICODE)
 register_type(UNICODEARRAY)
@@ -143,8 +142,6 @@ def refresh():
 
 
 def process():
-    proxies = get_proxies(True)
-    pprint(proxies)
     with closing(get_connection()) as connection:
         total = 0
         with closing(connection.cursor()) as cursor:

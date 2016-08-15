@@ -2,17 +2,20 @@
 
 CELERY = 'amqp://guest:guest@0.0.0.0:5672/%2f'
 
-INSTANTPROXIES_COM = {
-    'username': '...',
-    'password': '...',
-}
-
 POSTGRESQL = {
     'host': '...',
     'port': '...',
     'user': '...',
     'password': '...',
     'database': '...',
+}
+
+PROXY = {
+    'hostname': '...',
+    'ports': (
+        ...,
+        ...,
+    ),
 }
 
 SENTRY = '...'

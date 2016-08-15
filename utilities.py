@@ -2,29 +2,19 @@
 
 from io import open
 from mmap import mmap
-from random import choice
+from random import randint
 
-from beaker.cache import CacheManager
-from beaker.util import parse_cache_config_options
 from psycopg2 import connect
 from psycopg2.extras import DictCursor
 from raven import Client
 from requests import Session
 from scrapy.selector import Selector
 
-from settings import INSTANTPROXIES_COM, POSTGRESQL, SENTRY
-
-options = {
-    'cache.data_dir': '.cache/data',
-    'cache.lock_dir': '.cache/lock',
-    'cache.type': 'dbm',
-}
-cache = CacheManager(**parse_cache_config_options(options))
+from settings import POSTGRESQL, PROXY, SENTRY
 
 
-@cache.cache('get_details', expire=86400)
 def get_details(road, number, zip_code, city):
-    proxies = get_proxies(False)
+    proxies = get_proxies()
 
     session = Session()
 
@@ -108,34 +98,16 @@ def get_connection():
     return connection
 
 
-def get_proxies(invalidate):
+def get_proxy():
+    if not PROXY:
+        return
+    return '{hostname:s}:{port:d}'.format(hostname=PROXY['hostname'], port=randint(*PROXY['ports']))
 
-    @cache.cache('get_proxies')
-    def get_proxies():
-        session = Session()
-        response = session.request(
-            'POST',
-            'http://admin.instantproxies.com/login_do.php',
-            data={
-                'username': INSTANTPROXIES_COM['username'],
-                'password': INSTANTPROXIES_COM['password'],
-            },
-        )
-        selector = Selector(text=response.text)
-        textarea = selector.xpath(
-            u'//textarea[@id="proxies-textarea"]/text()',
-        ).extract()
-        textarea = textarea[0]
-        textarea = textarea.split('\n')
-        textarea = map(lambda item: item.strip(), textarea)
-        textarea = filter(None, textarea)
-        return textarea
 
-    if invalidate:
-        cache.invalidate(get_proxies, 'get_proxies')
-
-    proxies = get_proxies()
-    proxy = choice(proxies)
+def get_proxies():
+    proxy = get_proxy()
+    if not proxy:
+        return
     return {
         'http': 'http://{proxy:s}'.format(proxy=proxy),
         'https': 'http://{proxy:s}'.format(proxy=proxy),

@@ -21,6 +21,6 @@ $ workon e-service.admin.ch
 $ python manage.py bootstrap
 $ python manage.py refresh
 $ python manage.py process
-$ celery worker --app=tasks --concurrency=16 --loglevel=WARN --pool=gevent --queue=e-service.admin.ch
+$ celery worker --app=tasks --concurrency=32 --loglevel=WARN --pool=gevent --queue=e-service.admin.ch
 $ deactivate
 ```
