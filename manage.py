@@ -2,19 +2,74 @@
 
 from contextlib import closing
 from io import open
+from logging import basicConfig, WARN
 from sys import argv
 
 from backports import csv
 from psycopg2.extensions import register_type, UNICODE, UNICODEARRAY
+from pyres import ResQ
+from pyres.horde import Khan
+from simplejson import dumps
 from tqdm import tqdm
 
-from tasks import celery as celery_
-from utilities import get_connection, get_sentry, get_total
+from utilities import get_connection, get_details, get_sentry, get_total
+
+basicConfig(level=WARN)
 
 register_type(UNICODE)
 register_type(UNICODEARRAY)
 
 sentry = get_sentry()
+
+
+class Record():
+
+    queue = 'records'
+
+    @staticmethod
+    def perform(id):
+        try:
+            with closing(get_connection()) as connection:
+                with closing(connection.cursor()) as cursor:
+                    query = 'SELECT * FROM records WHERE id = %(id)s'
+                    cursor.execute(
+                        query,
+                        {
+                            'id': id,
+                        },
+                    )
+                    record = cursor.fetchone()
+                    if record['details']:
+                        return
+                    details = get_details(
+                        record['road'],
+                        record['number'],
+                        record['zip_code'],
+                        record['city'],
+                    )
+                    if not details:
+                        return
+                    details = dumps(
+                        details,
+                        ensure_ascii=False,
+                        indent='    ',
+                        sort_keys=True,
+                    )
+                    query = '''
+                    UPDATE records
+                    SET details = %(details)s
+                    WHERE id = %(id)s
+                    '''
+                    cursor.execute(
+                        query,
+                        {
+                            'details': details,
+                            'id': id,
+                        },
+                    )
+                    connection.commit()
+        except Exception:
+            sentry.captureException()
 
 
 def bootstrap():
@@ -142,6 +197,7 @@ def refresh():
 
 
 def process():
+    r = ResQ()
     with closing(get_connection()) as connection:
         total = 0
         with closing(connection.cursor()) as cursor:
@@ -157,12 +213,12 @@ def process():
             query = 'SELECT * FROM records WHERE details IS NULL'
             cursor.execute(query)
             for record in tqdm(cursor, total=total):
-                celery_.send_task(
-                    'tasks.process',
-                    (record['id'],),
-                    queue='e-service.admin.ch',
-                    serializer='json',
-                )
+                r.enqueue(Record, record['id'])
+
+
+def workers():
+    worker = Khan(pool_size=10, queues=['records'])
+    worker.work()
 
 if __name__ == '__main__':
     try:
@@ -172,6 +228,8 @@ if __name__ == '__main__':
             refresh()
         if argv[1] == 'process':
             process()
+        if argv[1] == 'workers':
+            workers()
     except KeyboardInterrupt:
         pass
     except Exception:

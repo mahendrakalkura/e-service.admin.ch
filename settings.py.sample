@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-CELERY = 'amqp://guest:guest@0.0.0.0:5672/%2f'
-
 POSTGRESQL = {
     'host': '...',
     'port': '...',
