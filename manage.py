@@ -217,8 +217,8 @@ def process():
 
 
 def workers():
-    worker = Khan(pool_size=PYRES, queues=['records'])
-    worker.work()
+    workers = Khan(pool_size=PYRES, queues=['records'])
+    workers.work()
 
 if __name__ == '__main__':
     try:
