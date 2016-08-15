@@ -20,8 +20,6 @@ basicConfig(level=WARN)
 register_type(UNICODE)
 register_type(UNICODEARRAY)
 
-sentry = get_sentry()
-
 
 class Record():
 
@@ -70,6 +68,7 @@ class Record():
                     )
                     connection.commit()
         except Exception:
+            sentry = get_sentry()
             sentry.captureException()
 
 
@@ -234,4 +233,5 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         pass
     except Exception:
+        sentry = get_sentry()
         sentry.captureException()
