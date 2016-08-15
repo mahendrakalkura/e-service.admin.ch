@@ -12,6 +12,7 @@ from pyres.horde import Khan
 from simplejson import dumps
 from tqdm import tqdm
 
+from settings import PYRES
 from utilities import get_connection, get_details, get_sentry, get_total
 
 basicConfig(level=WARN)
@@ -217,7 +218,7 @@ def process():
 
 
 def workers():
-    worker = Khan(pool_size=10, queues=['records'])
+    worker = Khan(pool_size=PYRES, queues=['records'])
     worker.work()
 
 if __name__ == '__main__':

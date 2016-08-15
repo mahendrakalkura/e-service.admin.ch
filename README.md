@@ -22,5 +22,6 @@ $ python manage.py bootstrap
 $ python manage.py refresh
 $ python manage.py process
 $ python manage.py workers
+$ RESWEB_SETTINGS='.../settings.py' resweb
 $ deactivate
 ```

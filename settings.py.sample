@@ -16,4 +16,9 @@ PROXY = {
     ),
 }
 
+PYRES = ...
+
 SENTRY = '...'
+
+SERVER_HOST = '...'
+SERVER_PORT = ...
