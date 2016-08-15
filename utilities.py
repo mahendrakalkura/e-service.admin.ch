@@ -4,6 +4,7 @@ from io import open
 from mmap import mmap
 from random import randint
 
+from fake_useragent import UserAgent
 from psycopg2 import connect
 from psycopg2.extras import DictCursor
 from raven import Client
@@ -16,11 +17,16 @@ from settings import POSTGRESQL, PROXY, SENTRY
 def get_details(road, number, zip_code, city):
     proxies = get_proxies()
 
+    user_agent = UserAgent()
+
     session = Session()
 
     response = session.request(
         'GET',
         'https://www.e-service.admin.ch/eschkg/app/forward.do',
+        headers={
+            'User-Agent': user_agent.random,
+        },
         params={
             'forward': 'zustaendigkeit',
             'navId': 'zustaendigkeit',
@@ -31,6 +37,9 @@ def get_details(road, number, zip_code, city):
     response = session.request(
         'GET',
         'https://www.e-service.admin.ch/eschkg/app/ajax_locality',
+        headers={
+            'User-Agent': user_agent.random,
+        },
         params={
             'postCode': zip_code,
         },
@@ -57,6 +66,9 @@ def get_details(road, number, zip_code, city):
             'postCode': zip_code,
             'street': road,
             'tabindex': '11',
+        },
+        headers={
+            'User-Agent': user_agent.random,
         },
         proxies=proxies,
     )
