@@ -13,7 +13,13 @@ from simplejson import dumps
 from tqdm import tqdm
 
 from settings import PYRES
-from utilities import get_connection, get_details, get_sentry, get_total
+from utilities import (
+    get_city,
+    get_connection,
+    get_details,
+    get_sentry,
+    get_total,
+)
 
 basicConfig(level=WARN)
 
@@ -44,7 +50,7 @@ class Record():
                         record['road'],
                         record['number'],
                         record['zip_code'],
-                        record['city'],
+                        record['city_new'],
                     )
                     if not details:
                         return
@@ -91,7 +97,8 @@ def bootstrap():
                     road CHARACTER VARYING(255) NOT NULL,
                     number CHARACTER VARYING(255) NOT NULL,
                     zip_code CHARACTER VARYING(255) NOT NULL,
-                    city CHARACTER VARYING(255) NOT NULL,
+                    city_old CHARACTER VARYING(255) NOT NULL,
+                    city_new CHARACTER VARYING(255) NULL,
                     details json NULL
                 )
             '''
@@ -137,7 +144,12 @@ def bootstrap():
             cursor.execute(query)
 
             query = '''
-            CREATE INDEX records_city ON records USING btree (city)
+            CREATE INDEX records_city_old ON records USING btree (city_old)
+            '''
+            cursor.execute(query)
+
+            query = '''
+            CREATE INDEX records_city_new ON records USING btree (city_new)
             '''
             cursor.execute(query)
 
@@ -166,7 +178,7 @@ def refresh():
                         AND
                         zip_code = %(zip_code)s
                         AND
-                        city = %(city)s
+                        city_old = %(city_old)s
                     '''
                     cursor.execute(
                         query,
@@ -174,15 +186,15 @@ def refresh():
                             'road': row[2],
                             'number': row[3],
                             'zip_code': row[0],
-                            'city': row[1],
+                            'city_old': row[1],
                         },
                     )
                     record = cursor.fetchone()
                     if record:
                         continue
                     query = '''
-                    INSERT INTO records (road, number, zip_code, city)
-                        VALUES (%(road)s, %(number)s, %(zip_code)s, %(city)s)
+                    INSERT INTO records (road, number, zip_code, city_old)
+                        VALUES (%(road)s, %(number)s, %(zip_code)s, %(city_old)s)
                     '''
                     cursor.execute(
                         query,
@@ -190,13 +202,49 @@ def refresh():
                             'road': row[2],
                             'number': row[3],
                             'zip_code': row[0],
-                            'city': row[1],
+                            'city_old': row[1],
                         },
                     )
                     connection.commit()
 
 
-def process():
+def process_1():
+    with closing(get_connection()) as connection:
+        with closing(connection.cursor()) as cursor:
+            items = {}
+            query = '''
+            SELECT DISTINCT zip_code, city_old
+            FROM records
+            WHERE city_new IS NULL
+            '''
+            cursor.execute(query)
+            records = cursor.fetchall()
+            for record in records:
+                if record['zip_code'] not in items:
+                    items[record['zip_code']] = []
+                items[record['zip_code']].append(record['city_old'])
+            for zip_code, cities_old in tqdm(items.items()):
+                cities = get_city(zip_code, cities_old)
+                if not cities:
+                    continue
+                for city_old, city_new in cities.items():
+                    query = '''
+                    UPDATE records
+                    SET city_new = %(city_new)s
+                    WHERE zip_code = %(zip_code)s AND city_old = %(city_old)s
+                    '''
+                    cursor.execute(
+                        query,
+                        {
+                            'city_new': city_new,
+                            'zip_code': zip_code,
+                            'city_old': city_old,
+                        },
+                    )
+                connection.commit()
+
+
+def process_2():
     r = ResQ()
     with closing(get_connection()) as connection:
         total = 0
@@ -204,13 +252,16 @@ def process():
             query = '''
             SELECT COUNT(id) AS count
             FROM records
-            WHERE details IS NULL
+            WHERE city_new IS NOT NULL AND details IS NULL
             '''
             cursor.execute(query)
             total = cursor.fetchone()['count']
-
         with closing(connection.cursor('cursor')) as cursor:
-            query = 'SELECT * FROM records WHERE details IS NULL'
+            query = '''
+            SELECT *
+            FROM records
+            WHERE city_new IS NOT NULL AND details IS NULL
+            '''
             cursor.execute(query)
             for record in tqdm(cursor, total=total):
                 r.enqueue(Record, record['id'])
@@ -226,8 +277,10 @@ if __name__ == '__main__':
             bootstrap()
         if argv[1] == 'refresh':
             refresh()
-        if argv[1] == 'process':
-            process()
+        if argv[1] == 'process_1':
+            process_1()
+        if argv[1] == 'process_2':
+            process_2()
         if argv[1] == 'workers':
             workers()
     except KeyboardInterrupt:

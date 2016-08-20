@@ -14,7 +14,59 @@ from scrapy.selector import Selector
 from settings import POSTGRESQL, PROXY, SENTRY
 
 
-def get_details(road, number, zip_code, city):
+def get_city(zip_code, cities_old):
+    proxies = get_proxies()
+
+    user_agent = UserAgent()
+
+    session = Session()
+
+    response = session.request(
+        'GET',
+        'https://www.e-service.admin.ch/eschkg/app/forward.do',
+        headers={
+            'User-Agent': user_agent.random,
+        },
+        params={
+            'forward': 'zustaendigkeit',
+            'navId': 'zustaendigkeit',
+        },
+        proxies=proxies,
+    )
+    if not response:
+        return
+
+    response = session.request(
+        'POST',
+        'https://www.e-service.admin.ch/eschkg/app/ajax_locality',
+        data={
+            '_': '',
+            'class': 'select1Col',
+            'name': 'onrp',
+            'postCode': zip_code,
+        },
+        headers={
+            'User-Agent': user_agent.random,
+        },
+        proxies=proxies,
+    )
+    if not response:
+        return
+
+    items = {}
+    selector = Selector(text=response.text)
+    for city_old in cities_old:
+        city_new = selector.xpath(
+            u'//option[contains(text(), "{city_old:s}")]/@value'.format(
+                city_old=city_old,
+            ),
+        ).extract()
+        if city_new:
+            items[city_old] = city_new[0]
+    return items
+
+
+def get_details(road, number, zip_code, city_new):
     proxies = get_proxies()
 
     user_agent = UserAgent()
@@ -35,32 +87,7 @@ def get_details(road, number, zip_code, city):
     )
     if not response:
         return {
-            'error': 'if not response (1)'
-        }
-
-    response = session.request(
-        'GET',
-        'https://www.e-service.admin.ch/eschkg/app/ajax_locality',
-        headers={
-            'User-Agent': user_agent.random,
-        },
-        params={
-            'postCode': zip_code,
-        },
-        proxies=proxies,
-    )
-    if not response:
-        return {
-            'error': 'if not response (2)'
-        }
-
-    selector = Selector(text=response.text)
-    city = selector.xpath(
-        u'//option[contains(text(), "{city:s}")]/@value'.format(city=city),
-    ).extract()
-    if not city:
-        return {
-            'error': 'if not city'
+            'error': 'if not response'
         }
 
     response = session.request(
@@ -72,7 +99,7 @@ def get_details(road, number, zip_code, city):
             'enable_validation': 'on',
             'isSwissAddress': 'true',
             'number': number,
-            'onrp': city[0],
+            'onrp': city_new,
             'org.apache.struts.taglib.html.SUBMIT': 'zurueck',
             'postCode': zip_code,
             'street': road,
@@ -85,7 +112,12 @@ def get_details(road, number, zip_code, city):
     )
     if not response:
         return {
-            'error': 'if not response (3)'
+            'error': 'if not response'
+        }
+
+    if 'Meinten Sie vielleicht eine Strasse aus der Liste' in response.text:
+        return {
+            'error': 'if not street'
         }
 
     details = {
@@ -94,6 +126,7 @@ def get_details(road, number, zip_code, city):
         'fax': '',
         'email': '',
     }
+
     selector = Selector(text=response.text)
     lines = selector.xpath(
         u'//td[@class="label "][@colspan="5"]/text()',
@@ -109,6 +142,12 @@ def get_details(road, number, zip_code, city):
             details['email'] = line.replace('E-Mail:', '').strip()
             continue
         details['address'].append(line.strip())
+
+    if not details['phone'] and not details['fax'] and not details['email']:
+        return {
+            'error': 'if not details'
+        }
+
     return details
 
 
