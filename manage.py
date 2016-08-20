@@ -14,7 +14,7 @@ from tqdm import tqdm
 
 from settings import PYRES
 from utilities import (
-    get_city,
+    get_cities,
     get_connection,
     get_details,
     get_sentry,
@@ -156,7 +156,27 @@ def bootstrap():
             connection.commit()
 
 
-def refresh():
+def insert():
+    with closing(get_connection()) as connection:
+        with open(
+            'records.csv',
+            'r',
+            encoding='iso-8859-1',
+            newline='',
+        ) as resource:
+            with closing(connection.cursor()) as cursor:
+                cursor.copy_from(
+                    resource,
+                    'records',
+                    columns=('zip_code', 'city_old', 'road', 'number'),
+                    null='\\n',
+                    sep=';',
+                    size=999999999,
+                )
+                connection.commit()
+
+
+def update():
     with closing(get_connection()) as connection:
         total = get_total('records.csv')
         with open(
@@ -208,23 +228,21 @@ def refresh():
                     connection.commit()
 
 
-def process_1():
+def cities():
     with closing(get_connection()) as connection:
         with closing(connection.cursor()) as cursor:
-            items = {}
+            zip_codes = []
             query = '''
-            SELECT DISTINCT zip_code, city_old
+            SELECT DISTINCT zip_code
             FROM records
             WHERE city_new IS NULL
             '''
             cursor.execute(query)
             records = cursor.fetchall()
             for record in records:
-                if record['zip_code'] not in items:
-                    items[record['zip_code']] = []
-                items[record['zip_code']].append(record['city_old'])
-            for zip_code, cities_old in tqdm(items.items()):
-                cities = get_city(zip_code, cities_old)
+                zip_codes.append(record['zip_code'])
+            for zip_code in tqdm(zip_codes):
+                cities = get_cities(zip_code)
                 if not cities:
                     continue
                 for city_old, city_new in cities.items():
@@ -244,7 +262,7 @@ def process_1():
                 connection.commit()
 
 
-def process_2():
+def details():
     r = ResQ()
     with closing(get_connection()) as connection:
         total = 0
@@ -275,12 +293,14 @@ if __name__ == '__main__':
     try:
         if argv[1] == 'bootstrap':
             bootstrap()
-        if argv[1] == 'refresh':
-            refresh()
-        if argv[1] == 'process_1':
-            process_1()
-        if argv[1] == 'process_2':
-            process_2()
+        if argv[1] == 'insert':
+            insert()
+        if argv[1] == 'update':
+            update()
+        if argv[1] == 'cities':
+            cities()
+        if argv[1] == 'details':
+            details()
         if argv[1] == 'workers':
             workers()
     except KeyboardInterrupt:

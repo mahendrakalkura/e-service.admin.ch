@@ -19,9 +19,10 @@ How to run?
 $ cd e-service.admin.ch
 $ workon e-service.admin.ch
 $ python manage.py bootstrap
-$ python manage.py refresh
-$ python manage.py process_1
-$ python manage.py process_2
+$ python manage.py insert
+$ python manage.py update
+$ python manage.py cities
+$ python manage.py details
 $ python manage.py workers
 $ RESWEB_SETTINGS='.../settings.py' resweb
 $ deactivate

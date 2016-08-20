@@ -14,7 +14,7 @@ from scrapy.selector import Selector
 from settings import POSTGRESQL, PROXY, SENTRY
 
 
-def get_city(zip_code, cities_old):
+def get_cities(zip_code):
     proxies = get_proxies()
 
     user_agent = UserAgent()
@@ -53,17 +53,14 @@ def get_city(zip_code, cities_old):
     if not response:
         return
 
-    items = {}
+    cities = {}
     selector = Selector(text=response.text)
-    for city_old in cities_old:
-        city_new = selector.xpath(
-            u'//option[contains(text(), "{city_old:s}")]/@value'.format(
-                city_old=city_old,
-            ),
-        ).extract()
-        if city_new:
-            items[city_old] = city_new[0]
-    return items
+    options = selector.xpath('//option')
+    for option in options:
+        city_new = option.xpath('@value').extract()[0]
+        city_old = option.xpath('text()').extract()[0]
+        cities[city_old] = city_new
+    return cities
 
 
 def get_details(road, number, zip_code, city_new):
