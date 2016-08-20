@@ -33,6 +33,10 @@ def get_details(road, number, zip_code, city):
         },
         proxies=proxies,
     )
+    if not response:
+        return {
+            'error': 'if not response (1)'
+        }
 
     response = session.request(
         'GET',
@@ -45,13 +49,20 @@ def get_details(road, number, zip_code, city):
         },
         proxies=proxies,
     )
+    if not response:
+        return {
+            'error': 'if not response (2)'
+        }
 
     selector = Selector(text=response.text)
     city = selector.xpath(
         u'//option[contains(text(), "{city:s}")]/@value'.format(city=city),
     ).extract()
     if not city:
-        return
+        return {
+            'error': 'if not city'
+        }
+
     response = session.request(
         'POST',
         'https://www.e-service.admin.ch/eschkg/app/wizard/navigate.do',
@@ -72,6 +83,10 @@ def get_details(road, number, zip_code, city):
         },
         proxies=proxies,
     )
+    if not response:
+        return {
+            'error': 'if not response (3)'
+        }
 
     details = {
         'address': [],
@@ -79,7 +94,6 @@ def get_details(road, number, zip_code, city):
         'fax': '',
         'email': '',
     }
-
     selector = Selector(text=response.text)
     lines = selector.xpath(
         u'//td[@class="label "][@colspan="5"]/text()',
