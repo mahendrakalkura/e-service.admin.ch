@@ -8,12 +8,9 @@ POSTGRESQL = {
     'database': '...',
 }
 
-PROXY = {
-    'hostname': '...',
-    'ports': (
-        ...,
-        ...,
-    ),
+PROXIES = {
+    'http': '...',
+    'https': '...',
 }
 
 PYRES = ...

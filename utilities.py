@@ -2,7 +2,6 @@
 
 from io import open
 from mmap import mmap
-from random import randint
 
 from fake_useragent import UserAgent
 from psycopg2 import connect
@@ -11,12 +10,10 @@ from raven import Client
 from requests import Session
 from scrapy.selector import Selector
 
-from settings import POSTGRESQL, PROXY, SENTRY
+from settings import POSTGRESQL, PROXIES, SENTRY
 
 
 def get_cities(zip_code):
-    proxies = get_proxies()
-
     user_agent = UserAgent()
 
     session = Session()
@@ -31,7 +28,7 @@ def get_cities(zip_code):
             'forward': 'zustaendigkeit',
             'navId': 'zustaendigkeit',
         },
-        proxies=proxies,
+        proxies=PROXIES,
     )
     if not response:
         return
@@ -48,7 +45,7 @@ def get_cities(zip_code):
         headers={
             'User-Agent': user_agent.random,
         },
-        proxies=proxies,
+        proxies=PROXIES,
     )
     if not response:
         return
@@ -64,8 +61,6 @@ def get_cities(zip_code):
 
 
 def get_details(road, number, zip_code, city_new):
-    proxies = get_proxies()
-
     user_agent = UserAgent()
 
     session = Session()
@@ -80,7 +75,7 @@ def get_details(road, number, zip_code, city_new):
             'forward': 'zustaendigkeit',
             'navId': 'zustaendigkeit',
         },
-        proxies=proxies,
+        proxies=PROXIES,
     )
     if not response:
         return {
@@ -105,7 +100,7 @@ def get_details(road, number, zip_code, city_new):
         headers={
             'User-Agent': user_agent.random,
         },
-        proxies=proxies,
+        proxies=PROXIES,
     )
     if not response:
         return {
@@ -158,22 +153,6 @@ def get_connection():
         cursor_factory=DictCursor,
     )
     return connection
-
-
-def get_proxy():
-    if not PROXY:
-        return
-    return '{hostname:s}:{port:d}'.format(hostname=PROXY['hostname'], port=randint(*PROXY['ports']))
-
-
-def get_proxies():
-    proxy = get_proxy()
-    if not proxy:
-        return
-    return {
-        'http': 'http://{proxy:s}'.format(proxy=proxy),
-        'https': 'http://{proxy:s}'.format(proxy=proxy),
-    }
 
 
 def get_sentry():

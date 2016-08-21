@@ -9,10 +9,11 @@ from backports import csv
 from psycopg2.extensions import register_type, UNICODE, UNICODEARRAY
 from pyres import ResQ
 from pyres.horde import Khan
+from requests import request
 from simplejson import dumps
 from tqdm import tqdm
 
-from settings import PYRES
+from settings import PROXIES, PYRES
 from utilities import (
     get_cities,
     get_connection,
@@ -289,6 +290,22 @@ def workers():
     workers = Khan(pool_size=PYRES, queues=['records'])
     workers.work()
 
+
+def proxies():
+    for index in range(10):
+        response = request(
+            'GET',
+            'http://ifconfig.co/json',
+            headers={
+                'Content-Type': 'application/json',
+            },
+            proxies=PROXIES,
+        )
+        print '{index:02d}: {ip:s}'.format(
+            index=index + 1,
+            ip=response.json()['ip'],
+        )
+
 if __name__ == '__main__':
     try:
         if argv[1] == 'bootstrap':
@@ -303,6 +320,8 @@ if __name__ == '__main__':
             details()
         if argv[1] == 'workers':
             workers()
+        if argv[1] == 'proxies':
+            proxies()
     except KeyboardInterrupt:
         pass
     except Exception:
