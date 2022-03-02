@@ -36,7 +36,7 @@ raven==5.24.3
 redis==2.10.5
 requests==2.11.0
 resweb==0.1.7
-Scrapy==1.1.1
+Scrapy==1.8.2
 service-identity==16.0.0
 setproctitle==1.1.10
 simplejson==3.8.2
